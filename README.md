@@ -13,6 +13,7 @@ sudo apt update -y;
 sudo apt upgrade -y;
 sudo apt install samtools -y;
 sudo apt install seqtk -y;
+sudo apt install freebayes -y;
 ```
 
 
@@ -93,6 +94,15 @@ samtools index sequence1.sorted.bam
 
 ```bash
 samtools bam2fq input.bam | seqtk seq -A > output.fa
+```
+
+
+
+### Calling Variants
+
+```bash
+# Multiple aligned file can be added in the same place
+freebayes -f ref.fa aln.bam >var.vcf
 ```
 
 
