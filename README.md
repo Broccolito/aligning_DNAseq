@@ -21,7 +21,7 @@ sudo apt install seqtk -y;
 
 Download BWA from: http://sourceforge.net/projects/bio-bwa/files/
 
-Once download, use:
+Once downloaded, use:
 
 ```bash
 tar xvfj bwa-*.tar.bz2 
