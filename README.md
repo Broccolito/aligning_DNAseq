@@ -102,7 +102,7 @@ samtools bam2fq input.bam | seqtk seq -A > output.fa
 
 ```bash
 # Multiple aligned file can be added in the same place
-freebayes -f ref.fa aln.bam >var.vcf
+freebayes -f ref.fa aln.bam > var.vcf
 ```
 
 
