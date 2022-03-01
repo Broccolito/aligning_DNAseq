@@ -1,0 +1,96 @@
+3 step process:
+1. Align the genomes (fastq/fastq.gz -> sam/sam.gz)
+
+"""
+https://github.com/Broccolito/aligning_DNAseq
+"""
+
+
+2. Quanlity control
+
+"""
+samtools view -Sq 2 unfiltered.sam > filtered.sam;
+"""
+
+3. Duplotype calling
+
+"""
+### get_duplotype.R
+
+# To install packages, do "install.packages("dplyr")"
+
+library(dplyr)
+library(stringr)
+library(purrr)
+library(writexl)
+
+get_nucleotype = function(filename, protospacer, edit_site_index){
+  
+  f = readLines(con = filename)
+  f = f[nchar(f)>100]
+  f = f[-1]
+  writeLines(text = f, con = paste0("trimmed", filename))
+  trimmed_filename = paste0("trimmed", filename)
+  
+  f = read.delim(trimmed_filename, sep = "\t", header = FALSE)
+  file.remove(trimmed_filename)
+  
+  barcode = f[,1]
+  aligned_sequence = f[,10]
+  
+  keep = nchar(aligned_sequence)>0
+  aligned_sequence = aligned_sequence[keep]
+  barcode = barcode[keep]
+  
+  overall_edit_index = aligned_sequence %>%
+    str_locate(protospacer) %>%
+    table() %>%
+    sort(decreasing = TRUE)
+  overall_edit_index = as.numeric(names(overall_edit_index[1]))
+  overall_edit_index = overall_edit_index + edit_site_index - 1
+  
+  edit_site_nucleotype = substr(aligned_sequence,overall_edit_index,overall_edit_index)
+  
+  return(tibble(barcode, edit_site_nucleotype, aligned_sequence))
+  
+}
+
+get_duplotype = function(file_label = "Q-H3-B-OBE1-QTC281-Tfx-210909_S25",
+                         protospacer1 = "TAGAAAGGCATGGATGAGAG",
+                         edit_site1_index = 15,
+                         protospacer2 = "GGCCCAGACTGAGCACGTGA",
+                         edit_site2_index = 4,
+                         edit_site1_sequence_filename = "Q-H3-B-OBE1-QTC281-Tfx-210909_S25_L001_R1_001.sam",
+                         edit_site2_sequence_filename = "Q-H3-B-OBE1-QTC281-Tfx-210909_S25_L001_R2_001.sam"){
+  
+  df_site1 = get_nucleotype(edit_site1_sequence_filename, protospacer1, edit_site1_index) %>%
+    rename("edit_site_nucleotype1" = "edit_site_nucleotype") %>%
+    rename("aligned_sequence1" = "aligned_sequence")
+  df_site2 = get_nucleotype(edit_site2_sequence_filename, protospacer2, edit_site2_index) %>%
+    rename("edit_site_nucleotype2" = "edit_site_nucleotype") %>%
+    rename("aligned_sequence2" = "aligned_sequence")
+  
+  df_merged = inner_join(df_site1, df_site2, by = "barcode") %>%
+    mutate(duplotype = paste0(edit_site_nucleotype1, edit_site_nucleotype2))
+  
+  duplotype_table = table(df_merged$duplotype)
+  duplotype = names(duplotype_table)
+  
+  duplotype_mat = tibble(file = file_label, duplotype, count = duplotype_table) %>%
+    arrange(desc(count)) 
+  
+  duplotype_mat[[paste0("count_", file_label)]] = duplotype_mat$count
+  duplotype_mat = duplotype_mat[,-c(1,3)]
+  
+  return(duplotype_mat)
+  
+}
+
+
+# Example
+# obe1 = get_duplotype(file_label = "OBE1",
+#                      edit_site1_sequence_filename = "FILTERED_Q-H3-B-OBE1-QTC281-Tfx-210909_S25_L001_R1_001.sam",
+#                      edit_site2_sequence_filename = "FILTERED_Q-H3-B-OBE1-QTC281-Tfx-210909_S25_L001_R2_001.sam")
+
+
+"""
